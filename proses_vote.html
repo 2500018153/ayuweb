@@ -1,0 +1,69 @@
+<?php
+
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    /* BAGIAN 1: AMBIL & BERSIHKAN DATA (sanitasi input) */
+    $nama   = isset($_POST['nama'])   ? trim($_POST['nama'])   : '';
+    $email  = isset($_POST['email'])  ? trim($_POST['email'])  : '';
+    $musisi = isset($_POST['musisi']) ? trim($_POST['musisi']) : '';
+    $alasan = isset($_POST['alasan']) ? trim($_POST['alasan']) : '';
+
+    /* BAGIAN 2: VALIDASI ULANG DI SISI SERVER */
+    $valid = true;
+
+    if ($nama === '') {
+        $valid = false;
+    }
+
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $valid = false;
+    }
+
+    if ($musisi === '') {
+        $valid = false;
+    }
+
+    if ($alasan === '' || strlen($alasan) < 15) {
+        $valid = false;
+    }
+
+    /* BAGIAN 3: SIMPAN KE FILE voting_band.txt (mode append) */
+    if ($valid) {
+
+        
+        $namaBersih   = str_replace(["|", "\r", "\n"], ' ', $nama);
+        $emailBersih  = str_replace(["|", "\r", "\n"], ' ', $email);
+        $musisiBersih = str_replace(["|", "\r", "\n"], ' ', $musisi);
+        $alasanBersih = str_replace(["|", "\r", "\n"], ' ', $alasan);
+
+        $tanggal = date('d-m-Y H:i:s');
+
+        $baris = $namaBersih . ' | ' . $emailBersih . ' | ' . $musisiBersih . ' | ' . $alasanBersih . ' | ' . $tanggal . PHP_EOL;
+
+        $voteFile = __DIR__ . '/voting_band.txt';
+
+        
+        $hasilSimpan = file_put_contents($voteFile, $baris, FILE_APPEND | LOCK_EX);
+
+        if ($hasilSimpan !== false) {
+         
+            header('Location: index.php?status=sukses#voting');
+            exit;
+        } else {
+           
+            header('Location: index.php?status=gagal#voting');
+            exit;
+        }
+
+    } else {
+        // Data tidak valid
+        header('Location: index.php?status=gagal#voting');
+        exit;
+    }
+
+} else {
+    
+    header('Location: index.php');
+    exit;
+}

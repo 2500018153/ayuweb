@@ -1,0 +1,197 @@
+<?php
+/* BAGIAN 1: HIT COUNTER */
+$counterFile = __DIR__ . '/counter_music.txt';
+
+if (!file_exists($counterFile)) {
+    file_put_contents($counterFile, '0');
+}
+
+$counter = (int) trim(file_get_contents($counterFile));
+$counter++;
+
+file_put_contents($counterFile, $counter, LOCK_EX);
+
+
+/* BAGIAN 2: DATA MUSISI */
+$musisiList = [
+    [
+        'id'    => 'hindia',
+        'nama'  => 'Hindia',
+        'genre' => 'Indie Pop / Alternative',
+        'kota'  => 'Jakarta',
+        'lagu'  => 'Rumah Ke Rumah',
+        'foto'  => 'hindia.jpg'
+    ],
+    [
+        'id'    => 'fourtwnty',
+        'nama'  => 'Fourtwnty',
+        'genre' => 'Folk / Indie',
+        'kota'  => 'Jakarta',
+        'lagu'  => 'Fana Merah Jambu',
+        'foto'  => 'fourtwnty.jpg'
+    ],
+    [
+        'id'    => 'reality-club',
+        'nama'  => 'Reality Club',
+        'genre' => 'Indie Rock',
+        'kota'  => 'Jakarta',
+        'lagu'  => 'Anything You Want',
+        'foto'  => 'realityclub.jpg'
+    ],
+];
+
+
+/* BAGIAN 3 : HITUNG HASIL VOTING SEMENTARA */
+$voteCounts = [];
+foreach ($musisiList as $m) {
+    $voteCounts[$m['nama']] = 0;
+}
+
+$voteFile = __DIR__ . '/voting_band.txt';
+if (file_exists($voteFile)) {
+    $lines = file($voteFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $parts = explode('|', $line);
+        if (count($parts) >= 3) {
+            $musisiDipilih = trim($parts[2]);
+            if (isset($voteCounts[$musisiDipilih])) {
+                $voteCounts[$musisiDipilih]++;
+            }
+        }
+    }
+}
+
+
+/* BAGIAN 4: PESAN STATUS SETELAH VOTING */
+$statusPesan = '';
+if (isset($_GET['status'])) {
+    if ($_GET['status'] === 'sukses') {
+        $statusPesan = '<div class="pesan pesan-sukses">✅ Terima kasih! Vote kamu berhasil disimpan.</div>';
+    } elseif ($_GET['status'] === 'gagal') {
+        $statusPesan = '<div class="pesan pesan-gagal">⚠️ Maaf, data tidak valid / gagal disimpan. Silakan coba lagi.</div>';
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndieSound - Katalog & Voting Musisi Indie Lokal Indonesia</title>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="container header-inner">
+            <h1 class="logo">🎸 IndieSound</h1>
+            <nav class="nav">
+                <a href="#katalog">Katalog Musisi</a>
+                <a href="#voting">Voting</a>
+                <a href="#hasil">Hasil Sementara</a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h2>Dukung Musisi Indie Lokal Indonesia</h2>
+            <p>Kenali, dengarkan, dan berikan suaramu untuk musisi indie favoritmu.</p>
+        </div>
+    </section>
+
+    <!-- KATALOG MUSISI -->
+    <section class="katalog" id="katalog">
+        <div class="container">
+            <h2 class="judul-section">Katalog Musisi Indie</h2>
+            <div class="grid-musisi">
+                <?php foreach ($musisiList as $m): ?>
+                    <!-- Kartu profil musisi -->
+                    <article class="kartu-musisi">
+                        <img src="<?php echo htmlspecialchars($m['foto']); ?>"
+                             alt="Foto <?php echo htmlspecialchars($m['nama']); ?>"
+                             class="foto-musisi">
+                        <div class="info-musisi">
+                            <h3><?php echo htmlspecialchars($m['nama']); ?></h3>
+                            <p><strong>Genre:</strong> <?php echo htmlspecialchars($m['genre']); ?></p>
+                            <p><strong>Asal Kota:</strong> <?php echo htmlspecialchars($m['kota']); ?></p>
+                            <p><strong>Lagu Andalan:</strong> <?php echo htmlspecialchars($m['lagu']); ?></p>
+                            <p class="jumlah-vote">Vote: <?php echo $voteCounts[$m['nama']]; ?></p>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+
+    <!-- FORM VOTING -->
+    <section class="voting" id="voting">
+        <div class="container">
+            <h2 class="judul-section">Form Voting Musisi Favorit</h2>
+
+            <?php echo $statusPesan; ?>
+
+           
+            <form action="proses_vote.php" method="POST" id="form-voting" novalidate>
+
+                <div class="form-group">
+                    <label for="nama">Nama Voter</label>
+                    <input type="text" id="nama" name="nama" placeholder="Masukkan nama kamu">
+                    <span class="error-msg" id="error-nama"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="text" id="email" name="email" placeholder="contoh@email.com">
+                    <span class="error-msg" id="error-email"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="musisi">Pilihan Musisi</label>
+                    <select id="musisi" name="musisi">
+                        <option value="">-- Pilih Musisi --</option>
+                        <?php foreach ($musisiList as $m): ?>
+                            <option value="<?php echo htmlspecialchars($m['nama']); ?>">
+                                <?php echo htmlspecialchars($m['nama']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <span class="error-msg" id="error-musisi"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="alasan">Alasan Memilih</label>
+                    <textarea id="alasan" name="alasan" rows="4" placeholder="Ceritakan alasan kamu memilih musisi ini (minimal 15 karakter)"></textarea>
+                    <span class="error-msg" id="error-alasan"></span>
+                </div>
+
+                <button type="submit" class="btn-submit">Kirim Vote</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- HASIL VOTING SEMENTARA -->
+    <section class="hasil" id="hasil">
+        <div class="container">
+            <h2 class="judul-section">Hasil Voting Sementara</h2>
+            <ul class="list-hasil">
+                <?php foreach ($voteCounts as $namaMusisi => $jumlah): ?>
+                    <li><?php echo htmlspecialchars($namaMusisi); ?> : <strong><?php echo $jumlah; ?> vote</strong></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    </section>
+
+    <!-- FOOTER - menampilkan jumlah pengunjung -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; <?php echo date('Y'); ?> IndieSound - Praktikum Pemrograman Web</p>
+            <p>Jumlah Pengunjung: <strong><?php echo $counter; ?></strong> kali</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
